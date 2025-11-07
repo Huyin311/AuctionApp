@@ -2,40 +2,53 @@ package com.huyin.inner_auction.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "transactions")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Transaction {
+
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(nullable = false)
     private UUID id;
 
-    @Column(name = "user_id", columnDefinition = "uuid", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
-    @Column(nullable = false)
-    private String type; // TOPUP | HOLD | RELEASE | PAYMENT | REFUND | FEE | PAYOUT
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private TransactionType type;
 
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "reference_id", columnDefinition = "uuid")
+    @Column(name = "reference_id")
     private UUID referenceId;
 
+    @Column(name = "related_entity")
     private String relatedEntity;
 
-    @Column(nullable = false)
-    private String status = "COMPLETED"; // PENDING | COMPLETED | FAILED
+    @Column(nullable = false, length = 30)
+    private String status = "COMPLETED";
 
-    @Column(nullable = false)
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "direction")
+    private String direction;
+
+    @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (id == null) id = UUID.randomUUID();
+        if (createdAt == null) createdAt = OffsetDateTime.now();
+    }
 }

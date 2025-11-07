@@ -45,7 +45,6 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Password not strong: " + PasswordValidator.explain(rawPassword));
         }
 
-        // require recent verified OTP (within e.g. 10 minutes)
         boolean verified = otpService.hasRecentVerifiedOtp(normalized, 10);
         if (!verified) {
             throw new RuntimeException("Email not verified by OTP");
@@ -66,7 +65,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         userRepository.save(u);
-        return jwtUtil.generateToken(u.getId().toString());
+        return jwtUtil.generateTokenForUserId(u.getId());
     }
 
     @Override
@@ -77,7 +76,7 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordEncoder.matches(rawPassword, u.getPasswordHash())) {
             throw new RuntimeException("Invalid credentials");
         }
-        return jwtUtil.generateToken(u.getId().toString());
+        return jwtUtil.generateTokenForUserId(u.getId());
     }
 
     @Override

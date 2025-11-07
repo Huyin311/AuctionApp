@@ -2,43 +2,52 @@ package com.huyin.inner_auction.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class User {
+
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(nullable = false)
     private UUID id;
 
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Column(nullable = false)
-    private String role; // BUYER | SELLER | ADMIN
+    private String role = "BUYER";
 
+    @Column(name = "display_name")
     private String displayName;
+
+    @Column(name = "phone")
     private String phone;
 
-    @Column(nullable = false)
-    private Boolean depositPaid = false;
+    @Column(name = "deposit_paid", nullable = false)
+    private boolean depositPaid = false;
 
-    @Column(nullable = false, precision = 18, scale = 2)
-    private BigDecimal balance = BigDecimal.valueOf(0.00);
+    @Column(name = "balance", precision = 18, scale = 2, nullable = false)
+    private BigDecimal balance = BigDecimal.ZERO;
 
-    @Column(nullable = false)
+    @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
+    @Column(name = "updated_at")
     private OffsetDateTime updatedAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (id == null) id = UUID.randomUUID();
+        if (createdAt == null) createdAt = OffsetDateTime.now();
+    }
 }

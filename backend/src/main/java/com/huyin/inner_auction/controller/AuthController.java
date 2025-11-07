@@ -30,7 +30,9 @@ public class AuthController {
     public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> body) {
         String email = body.get("email");
         if (email == null || email.isBlank()) return ResponseEntity.badRequest().body(Map.of("error", "email required"));
-        otpService.generateAndSendOtp(email);
+
+        // gọi phương thức hiện có trong service
+        otpService.sendOtp(email);
         return ResponseEntity.ok(Map.of("status", "sent"));
     }
 

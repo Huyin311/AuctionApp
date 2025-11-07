@@ -5,19 +5,16 @@ import lombok.*;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * OTP table: store codes generated for email verification.
- */
 @Entity
 @Table(name = "otps")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Otp {
+
     @Id
-    @Column(columnDefinition = "uuid")
+    @Column(nullable = false)
     private UUID id;
 
     @Column(nullable = false)
@@ -26,15 +23,18 @@ public class Otp {
     @Column(nullable = false, length = 32)
     private String code;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
+
+    @Column(name = "expires_at")
     private OffsetDateTime expiresAt;
 
     @Column(nullable = false)
-    private Boolean verified = false;
+    private boolean verified = false;
 
-    @Column(nullable = false)
-    private Integer attempts = 0;
-
-    @Column(nullable = false)
-    private OffsetDateTime createdAt;
+    @PrePersist
+    public void prePersist() {
+        if (id == null) id = UUID.randomUUID();
+        if (createdAt == null) createdAt = OffsetDateTime.now();
+    }
 }
