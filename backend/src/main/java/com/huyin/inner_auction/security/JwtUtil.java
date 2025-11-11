@@ -8,10 +8,17 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import java.security.Key;
-import java.util.Base64;
-import java.util.Date;
-import java.util.UUID;
+import java.util.*;
 
+/**
+ * JwtUtil helpers.
+ *
+ * Added:
+ * - getUserIdString(token): returns user id as String (from "userId" claim or subject).
+ * - hasRole(token, role): checks common claim names ("roles", "authorities") for presence of role.
+ *
+ * Kept the existing getUserId returning UUID for other callers.
+ */
 @Component
 public class JwtUtil {
 
@@ -62,12 +69,17 @@ public class JwtUtil {
                 .parseClaimsJws(token).getBody().getSubject();
     }
 
+    /**
+     * Existing method returning UUID (may be null if subject/claim not a UUID).
+     */
     public UUID getUserId(String token) {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build()
                 .parseClaimsJws(token).getBody();
         Object userIdClaim = claims.get("userId");
         if (userIdClaim != null) {
-            return UUID.fromString(userIdClaim.toString());
+            try {
+                return UUID.fromString(userIdClaim.toString());
+            } catch (IllegalArgumentException ignored) {}
         }
         String sub = claims.getSubject();
         if (sub == null) return null;
@@ -78,12 +90,108 @@ public class JwtUtil {
         }
     }
 
+    /**
+     * New helper: returns user id as String.
+     * Prefers "userId" claim, falls back to subject. Returns null if neither present.
+     */
+    public String getUserIdString(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+            Object userIdClaim = claims.get("userId");
+            if (userIdClaim != null) return userIdClaim.toString();
+            String sub = claims.getSubject();
+            return (sub == null || sub.isBlank()) ? null : sub;
+        } catch (JwtException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * New helper: check whether token contains the given role.
+     *
+     * Supports common claim names:
+     * - "roles" : can be String (comma separated) or Collection
+     * - "authorities" : Collection or String
+     *
+     * Role comparison is case-sensitive by default; caller may pass "ROLE_ADMIN" or "ADMIN".
+     */
+    public boolean hasRole(String token, String role) {
+        if (token == null || role == null) return false;
+        try {
+            Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+
+            // 1) check "roles" claim
+            Object rolesClaim = claims.get("roles");
+            if (rolesClaim != null) {
+                if (rolesClaim instanceof Collection) {
+                    for (Object o : (Collection<?>) rolesClaim) {
+                        if (role.equals(String.valueOf(o)) || role.equalsIgnoreCase(String.valueOf(o))) return true;
+                    }
+                } else {
+                    String s = String.valueOf(rolesClaim);
+                    // comma separated
+                    String[] parts = s.split("[,;\\s]+");
+                    for (String p : parts) {
+                        if (role.equals(p) || role.equalsIgnoreCase(p)) return true;
+                    }
+                }
+            }
+
+            // 2) check "authorities" claim
+            Object authClaim = claims.get("authorities");
+            if (authClaim != null) {
+                if (authClaim instanceof Collection) {
+                    for (Object o : (Collection<?>) authClaim) {
+                        if (role.equals(String.valueOf(o)) || role.equalsIgnoreCase(String.valueOf(o))) return true;
+                    }
+                } else {
+                    String s = String.valueOf(authClaim);
+                    String[] parts = s.split("[,;\\s]+");
+                    for (String p : parts) {
+                        if (role.equals(p) || role.equalsIgnoreCase(p)) return true;
+                    }
+                }
+            }
+
+            // 3) check "scope" or "scopes" claim (space separated)
+            Object scopeClaim = claims.get("scope");
+            if (scopeClaim == null) scopeClaim = claims.get("scopes");
+            if (scopeClaim != null) {
+                String s = String.valueOf(scopeClaim);
+                String[] parts = s.split("[,;\\s]+");
+                for (String p : parts) {
+                    if (role.equals(p) || role.equalsIgnoreCase(p)) return true;
+                }
+            }
+
+            // 4) as last resort, check custom "roles" inside nested map (e.g., {"roles":["ROLE_ADMIN"]})
+            // (not exhaustive; adjust to how your tokens are structured)
+        } catch (JwtException ex) {
+            // invalid token -> no role
+        }
+        return false;
+    }
+
+    // (thay thế method validate hiện tại bằng version log lỗi)
     public boolean validate(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
-        } catch (JwtException | IllegalArgumentException ex) {
-            return false;
+        } catch (ExpiredJwtException ex) {
+            System.err.println("[JWT] Token expired: " + ex.getMessage());
+        } catch (UnsupportedJwtException ex) {
+            System.err.println("[JWT] Unsupported token: " + ex.getMessage());
+        } catch (MalformedJwtException ex) {
+            System.err.println("[JWT] Malformed token: " + ex.getMessage());
+        } catch (SignatureException ex) {
+            System.err.println("[JWT] Invalid signature: " + ex.getMessage());
+        } catch (IllegalArgumentException ex) {
+            System.err.println("[JWT] Illegal argument: " + ex.getMessage());
+        } catch (JwtException ex) {
+            System.err.println("[JWT] JWT exception: " + ex.getMessage());
+        } catch (Exception ex) {
+            System.err.println("[JWT] Unexpected exception while validating token: " + ex.getMessage());
         }
+        return false;
     }
 }

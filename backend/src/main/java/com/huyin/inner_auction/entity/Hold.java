@@ -8,14 +8,15 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "holds")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Hold {
 
     @Id
-    @Column(nullable = false)
+    @Column(name = "id", nullable = false)
     private UUID id;
 
     @Column(name = "user_id", nullable = false)
@@ -24,21 +25,18 @@ public class Hold {
     @Column(name = "auction_id", nullable = false)
     private UUID auctionId;
 
-    @Column(nullable = false, precision = 18, scale = 2)
+    @Column(name = "amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal amount;
 
-    @Column(nullable = false, length = 20)
-    private String status = "HELD";
+    @Column(name = "status", nullable = false)
+    private String status;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
+
     @Column(name = "released_at")
     private OffsetDateTime releasedAt;
-
-    @PrePersist
-    public void prePersist() {
-        if (id == null) id = UUID.randomUUID();
-        if (createdAt == null) createdAt = OffsetDateTime.now();
-    }
 }

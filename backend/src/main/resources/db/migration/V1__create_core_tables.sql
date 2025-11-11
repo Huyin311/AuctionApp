@@ -382,3 +382,28 @@ FROM platform_balance pb;
 -- ============================
 -- SCRIPT COMPLETE
 -- ============================
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS avatar_url text;
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS bio text;
+
+-- Add updated_at column to holds and populate from created_at for existing rows
+-- Test on staging first.
+
+ALTER TABLE holds
+    ADD COLUMN IF NOT EXISTS updated_at timestamptz;
+
+-- Populate updated_at with created_at for existing rows to keep consistency
+UPDATE holds
+SET updated_at = created_at
+WHERE updated_at IS NULL;
+
+-- Optional: ensure index on auction_id,status and user_id,status exist (improves queries)
+CREATE INDEX IF NOT EXISTS idx_hold_auction_status ON holds (auction_id, status);
+CREATE INDEX IF NOT EXISTS idx_hold_user_status ON holds (user_id, status);
+
+-- (Optional, Postgres only) Consider unique partial index to prevent duplicate HELD rows per user+auction
+-- Make sure duplicates are merged before enabling this constraint.
+-- CREATE UNIQUE INDEX IF NOT EXISTS uq_hold_user_auction_held ON holds (user_id, auction_id) WHERE status = 'HELD';

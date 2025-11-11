@@ -30,6 +30,13 @@ public class User {
     @Column(name = "display_name")
     private String displayName;
 
+    @Column(name = "avatar_url", columnDefinition = "text")
+    private String avatarUrl;
+
+    // NEW: bio (text)
+    @Column(name = "bio", columnDefinition = "text")
+    private String bio;
+
     @Column(name = "phone")
     private String phone;
 
